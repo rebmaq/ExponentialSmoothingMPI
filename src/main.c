@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
 		return 0;
 	}
 
-	// Make sure intermediate directory is empty (it is a pain to program folder creation/deletion in this setting)
+	// Make sure intermediate directory is empty
 	char *local_path = "intermediate_atom_data/";
 	char *full_path = malloc(strlen(argv[1]) + strlen(local_path) + 1);
 	sprintf(full_path, "%s%s", argv[1], local_path);
@@ -36,20 +36,24 @@ int main(int argc, char* argv[]) {
 	}
 	free(full_path);
 
-	// If third argument is not provided default time_step = 1
+	// If third argument is not provided, the default time_step = 1
 	int time_step = 1;
 	if (argc == 3) time_step = atoi(argv[2]);
 	int files_sz = get_sorted_file_names(argv[1], files);
 
+	// If fourth argument is not provided, the default smoothing_factor is 0.5
+	double smoothing_factor = 0.5;
+	if (argc == 4) {
+		char *eptr;
+		smoothing_factor = strtod(smoothing_factor, &eptr);
+	}
+	if (!(smoothing_factor > 0 && smoothing_factor < 1)) {
+		printf("Please provide a smoothing factor between 0 and 1 non-inclusive")
+		return 0;
+	}
+
 	int num_atoms, timestamp;
 	get_file_header(files[0], &timestamp, &num_atoms);
-
-	// Create new subfolder in passed directory for the intermediate files
-	// Set intermediate files creation flag
-	int intermediate_atom_files_flags[num_atoms];
-	for (int i = 0; i < num_atoms; ++i) {
-		intermediate_atom_files_flags[i] = 0;
-	}
 
 	// Initialize MPI processes 
 	MPI_Init(&argc, &argv);
@@ -63,23 +67,28 @@ int main(int argc, char* argv[]) {
 	MPI_Comm_size(MPI_COMM_WORLD, &world_size_buf);
 	uint32_t world_size = world_size_buf;
 
+	// world_rank ranges from [0, number of processes], an atoms identifier ranges from [1, the maximum number of atoms]
 	int current_atom = (world_rank + 1);
-	double smoothing_factor = .5;
+	
 	FILE *intermediate_file;
-	while (current_atom < num_atoms) {
-		// Each process will work on an atom if its id % the number of processes = the current process rank
-		if (world_size == 1 || current_atom % world_size == (world_rank + 1)) {
+	while (current_atom <= num_atoms) {
+		// If there is only one process, it will operate on every atom
+		// Each process will work on an atom if the current atom number % the number of processes = (the current process rank + 1) % the number of processes
+		// i.e. each process will operate on an atom if they are in the same congruence class mod the total number of processes
+		if (world_size == 1 || current_atom % world_size == (world_rank + 1) % world_size) { // Smoothing logic
 
 			local_path = "intermediate_atom_data/";
 			char file_name[strlen("atom_intermediate_file.txt") + MAX_ATOM_DIGITS];
 			sprintf(file_name, "atom%d_intermediate_file.txt", current_atom);
-			char *full_path = malloc(strlen(argv[1]) + strlen(local_path) + strlen(file_name) + 1); // Can reduce mallocs by pulling outside of while loop and changing file naming
+			char *full_path = malloc(strlen(argv[1]) + strlen(local_path) + strlen(file_name) + 1); // Can reduce mallocs by pulling outside of while loop and changing file naming system
 			sprintf(full_path, "%s%s%s", argv[1], local_path, file_name);
+
 			// Read each file and skip based on the time_step
-			for (int file_idx = 0; file_idx < files_sz - time_step; file_idx += time_step) {
+			// Each loop reads the current timestamp and the next timestamp
+			for (int file_idx = 0; file_idx < (files_sz - 1) - time_step; file_idx += time_step) {
 					
-				double atom_data_t[MAX_TOKENS], atom_data_t_1[MAX_TOKENS], result[MAX_TOKENS];
-				get_atom_data(files[file_idx + time_step], current_atom, atom_data_t);
+				double atom_data_t[MAX_TOKENS], atom_data_t_1[MAX_TOKENS], result[MAX_TOKENS]; //atom_data_t is the current time stamp, atom_data_t_1 is the next time_stamp 
+				get_atom_data(files[file_idx + time_step], current_atom, atom_data_t_1);
 				// If the intermediate file exists take the next set of values to be smoothed from it
 				if (file_exists(full_path)) {
 					// Read the last line of the intermediate file
@@ -87,21 +96,19 @@ int main(int argc, char* argv[]) {
 					char str[MAX_TOKENS * MAX_TOKEN_LENGTH];
 					while (fgets(str, sizeof(str), intermediate_file) != NULL);
 					fclose(intermediate_file);
-					str_to_data(str, atom_data_t_1);
+					str_to_data(str, atom_data_t);
 				}
 				else {
 					// Read the current atoms data from the original dataset, and write the first datapoint to the intermediate file
-					get_atom_data(files[file_idx], current_atom, atom_data_t_1);
-					write_line_to_file(full_path, files[file_idx], atom_data_t_1);
+					get_atom_data(files[file_idx], current_atom, atom_data_t);
+					write_line_to_file(full_path, files[file_idx], atom_data_t);
 				}
-				exponential_smoothing(smoothing_factor, atom_data_t_1, atom_data_t, result);
-				write_line_to_file(full_path, files[file_idx + time_step], result);
+				exponential_smoothing(smoothing_factor, atom_data_t, atom_data_t_1, result);
+				write_line_to_file(full_path, result);
 			}
 			free(full_path);
 		}
 		++current_atom;
 	}
 	MPI_Finalize();
-
-	// write final dataset
 }
