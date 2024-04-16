@@ -1,20 +1,3 @@
-#CC=CC
-#CFLAGS=-c -Ofast
-#LDFLAGS=-lm -Ofast -w -fopenmp
-#INC=./include
-#SRC=$(INC)/read_dump_file.c
-#OBJ=$(INC)/read_dump_file.o
-#EXE=main
-#
-#all: $(SRC) $(EXE)
-#
-#$(EXE): $(OBJ)
-#		$(CC) $(OBJ) -o $@ $(LDFLAGS)
-#.c.o:
-#		$(CC) $(LDFLAGS) $(CFLAGS) $< -o $@
-#clean:
-#		rm *.o $(INC)/*.o
-
 CC := mpicc
 SRCD := src
 TSTD := tests
