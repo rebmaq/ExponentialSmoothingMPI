@@ -45,7 +45,7 @@ void get_atom_data(const char *file_name, int id, double data[]);
 void write_line_to_file(const char *file_name, double data[]);
 
 // Writes the string-represented doubles stored in str[] to data[]
-void str_to_data(const char str[], double data[]);
+void str_to_data(char str[], double data[]);
 
 // Checks if a file exists
 // Returns 1 if a file with the name file_name exists, 0 otherwise

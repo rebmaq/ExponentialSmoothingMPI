@@ -31,7 +31,6 @@ void window_average(double **atom_data, int window_size, double result[]) {
 	}
 }
 
-
 // Array of char* to store the file names
 char *files[MAX_FILES];
 
@@ -65,10 +64,10 @@ int main(int argc, char* argv[]) {
 	double smoothing_factor = 0.5;
 	if (argc == 4) {
 		char *eptr;
-		smoothing_factor = strtod(smoothing_factor, &eptr);
+		smoothing_factor = strtod(argv[3], &eptr);
 	}
 	if (!(smoothing_factor > 0 && smoothing_factor < 1)) {
-		printf("Please provide a smoothing factor between 0 and 1 non-inclusive")
+		printf("Please provide a smoothing factor between 0 and 1 non-inclusive");
 		return 0;
 	}
 
@@ -91,16 +90,22 @@ int main(int argc, char* argv[]) {
 	int current_atom = (world_rank + 1);
 	
 	FILE *intermediate_file;
+	char file_name[strlen("atom_intermediate_file.txt") + MAX_ATOM_DIGITS];
+	local_path = "intermediate_atom_data/";
+	size_t max_full_path_len = strlen(argv[1])                      // Base directory
+	                           + strlen(local_path)                 // Intermediate folder
+	                           + strlen("atom")                    // Fixed part of file_name
+	                           + MAX_ATOM_DIGITS                   // Max digits for atom number
+	                           + strlen("_intermediate_file.txt")  // Fixed suffix
+	                           + 1;                                // Null terminator
+	full_path = malloc(max_full_path_len);
 	while (current_atom <= num_atoms) {
 		// If there is only one process, it will operate on every atom
 		// Each process will work on an atom if the current atom number % the number of processes = (the current process rank + 1) % the number of processes
 		// i.e. each process will operate on an atom if they are in the same congruence class mod the total number of processes
 		if (world_size == 1 || current_atom % world_size == (world_rank + 1) % world_size) { // Smoothing logic
-
-			local_path = "intermediate_atom_data/";
-			char file_name[strlen("atom_intermediate_file.txt") + MAX_ATOM_DIGITS];
-			sprintf(file_name, "atom%d_intermediate_file.txt", current_atom);
-			char *full_path = malloc(strlen(argv[1]) + strlen(local_path) + strlen(file_name) + 1); // Can reduce mallocs by pulling outside of while loop and changing file naming system
+			
+			sprintf(file_name, "atom%0*d_intermediate_file.txt", MAX_ATOM_DIGITS, current_atom);
 			sprintf(full_path, "%s%s%s", argv[1], local_path, file_name);
 
 			// Read each file and skip based on the time_step
@@ -121,14 +126,15 @@ int main(int argc, char* argv[]) {
 				else {
 					// Read the current atoms data from the original dataset, and write the first datapoint to the intermediate file
 					get_atom_data(files[file_idx], current_atom, atom_data_t);
-					write_line_to_file(full_path, files[file_idx], atom_data_t);
+					// write_line_to_file(full_path, files[file_idx], atom_data_t);
+					write_line_to_file(full_path, atom_data_t);
 				}
 				exponential_smoothing(smoothing_factor, atom_data_t, atom_data_t_1, result);
 				write_line_to_file(full_path, result);
 			}
-			free(full_path);
 		}
 		++current_atom;
 	}
+	free(full_path);
 	MPI_Finalize();
 }

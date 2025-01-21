@@ -94,11 +94,11 @@ void get_atom_data(const char *file_name, int id, double data[]) {
 	}
 }
 
-void write_line_to_file(char *file_name, double data[]) {
+void write_line_to_file(const char *file_name, double data[]) {
 	char buf[MAX_TOKENS * MAX_TOKEN_LENGTH];
 	FILE *fp;
 	if((fp = fopen(file_name, "a")) != NULL) {
-		fprintf(fp, "%d %d %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf\n", 
+		fprintf(fp, "%d %d %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf\n",
 				(int)(data[ATOM_ID]), (int)(data[ATOM_TYPE]), data[ATOM_X], data[ATOM_Y], data[ATOM_Z], data[ATOM_XU], data[ATOM_YU], data[ATOM_ZU],
 				data[ATOM_STRESS_1], data[ATOM_STRESS_2], data[ATOM_STRESS_3], data[ATOM_STRESS_4], data[ATOM_STRESS_5], data[ATOM_STRESS_6]);
 	}
