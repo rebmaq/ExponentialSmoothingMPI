@@ -21,3 +21,14 @@ mpirun -np number_of_processes ./bin/main dataset [time_step=1] [smoothing_facto
 - dataset: the directory containing the LAMMPS dataset
 - time_step: the iteration step over the data files, e.g. time_step=1 iterates over all files, time_step=2 iterates over every other file, etc.(*Optional argument*, default value is 1)
 - smoothing_factor: the smoothing factor used in performing exponential smoothing (*Optional argument*, default value is 0.5)
+
+### TODO: Potential Optimizations
+- Convert input to binary data
+    - This should reduce the size of files by ~13% if we store each number in the list of 14 properties of an atom, as doubles rather than strings
+- Store data into a data store/in memory hashamp
+- Load balancing node/Query node with all data
+
+### Concerns: 
+- Do MPI nodes see files created by other nodes on our machine? How can we find out?
+- Would incorporating a database be more beneficial than a hash table?
+- 
