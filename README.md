@@ -31,4 +31,3 @@ mpirun -np number_of_processes ./bin/main dataset [time_step=1] [smoothing_facto
 ### Concerns: 
 - Do MPI nodes see files created by other nodes on our machine? How can we find out?
 - Would incorporating a database be more beneficial than a hash table?
-- 

@@ -12,6 +12,26 @@ void exponential_smoothing(double smoothing_factor, double data_0[], double data
 	}
 }
 
+// Window averaging function
+void window_average(double **atom_data, int window_size, double result[]) {
+	// Data that is not averaged
+	for (int i = 0; i < ATOM_STRESS_1; ++i) {
+		for (int j = 0; j < window_size; ++j) {
+			result[i] = atom_data[j][i];
+		}
+	}
+	// Window average stress values
+	double *average = malloc(MAX_TOKENS * sizeof(double));
+	for (int i = ATOM_STRESS_1; i < MAX_TOKENS; ++i) {
+		average[i] = 0.0;
+		for (int j = 0; j < window_size; ++j) {
+			average[i] += atom_data[j][i];
+		}
+		result[i] = average[i] / window_size;
+	}
+}
+
+
 // Array of char* to store the file names
 char *files[MAX_FILES];
 
