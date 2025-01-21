@@ -19,7 +19,7 @@ INC := -I $(INCD)
 
 LIBS := $(LIBD)
 
-CFLAGS := -g
+CFLAGS := -g -O3 -march=native --fast-math -funroll-loops
 
 .PHONY: clean all setup
 
